@@ -1,0 +1,1 @@
+Pos:0 X:-32.4 Y:-16.6 Z:7.6 C:135 D: 37.0 Ponto adicionado por ser o primeiro da lista
