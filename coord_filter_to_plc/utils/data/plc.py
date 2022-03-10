@@ -163,41 +163,32 @@ def data_to_plc(data_ctrl: dict,
         ########################################################################################
         for n in range(ui.tbl_positions.rowCount()):
             ui.tbl_positions.removeRow(n)
-        custom_header_list = ["Posições", "X", "Y", "Z", "C", "D", "Info"]
+
         qt_create_table(ui.tbl_positions,
                         7,
-                        len(data_list_pos),
-                        custom_header_list,
-                        hor_header=False,
-                        ver_header=True,
-                        custom_header=True)
+                        len(data_list_pos))
         #######################################
-        # Create grafic
+        # Create graphic
         #######################################
         # Defining a scene rect of 400x200, with it's origin at 0,0.
         # If we don't set this on creation, we can set it later with .setSceneRect
         scene.clear()
-
-        if ui.graphicsView.scene():
-            ui.graphicsView.scene().clear()
-            ui.graphicsView.update()
-
+        ui.graphicsView.scene().clear()
+        ui.graphicsView.update()
 
         for i in range(len(data_list_pos)):
-            if i > 0:
-                ui.tbl_positions.setItem(i, 0, QTableWidgetItem(str(data_list_pos[i])))
-                ui.tbl_positions.setItem(i, 1, QTableWidgetItem(str(data_list_X[i])))
-                ui.tbl_positions.setItem(i, 2, QTableWidgetItem(str(data_list_Y[i])))
-                ui.tbl_positions.setItem(i, 3, QTableWidgetItem(str(data_list_Z[i])))
-                ui.tbl_positions.setItem(i, 4, QTableWidgetItem(str(data_list_C[i])))
-                ui.tbl_positions.setItem(i, 5, QTableWidgetItem(str(data_list_D[i])))
-                ui.tbl_positions.setItem(i, 6, QTableWidgetItem(str(data_list_info[i])))
-                ui.tbl_positions.resizeColumnsToContents()
+            ui.tbl_positions.setItem(i, 0, QTableWidgetItem(str(data_list_pos[i])))
+            ui.tbl_positions.setItem(i, 1, QTableWidgetItem(str(data_list_X[i])))
+            ui.tbl_positions.setItem(i, 2, QTableWidgetItem(str(data_list_Y[i])))
+            ui.tbl_positions.setItem(i, 3, QTableWidgetItem(str(data_list_Z[i])))
+            ui.tbl_positions.setItem(i, 4, QTableWidgetItem(str(data_list_C[i])))
+            ui.tbl_positions.setItem(i, 5, QTableWidgetItem(str(data_list_D[i])))
+            ui.tbl_positions.setItem(i, 6, QTableWidgetItem(str(data_list_info[i])))
+            ui.tbl_positions.resizeColumnsToContents()
 
-                scene.addEllipse(QRectF(data_list_X[i], data_list_Y[i], 0.2, 0.2), QPen(Qt.blue))
+            scene.addEllipse(QRectF(data_list_X[i], data_list_Y[i], 0.2, 0.2), QPen(Qt.blue))
 
-        ui.graphicsView.setScene(scene)
-        ui.graphicsView.scale(3, 3)
+        ui.graphicsView.update()
         ui.graphicsView.show()
 
 
