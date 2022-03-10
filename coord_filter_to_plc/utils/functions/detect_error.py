@@ -12,7 +12,6 @@ def find_error_filter(data: TextFileReader):
     :param data: Lista de posições vindas de um arquivo csv
     :return:
     """
-    print('- Iniciou filtro para verificar se há erros na linha de corte')
     new_data = list()
     d = list()
     i = 0

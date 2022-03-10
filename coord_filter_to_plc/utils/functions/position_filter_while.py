@@ -18,7 +18,8 @@ def pos_filter(in_data: DataFrame,
                ld: List[float],
                l_pos: List[int],
                l_info: List[str],
-               tag_cut_depth: str):
+               tag_cut_depth: str,
+               config_pontos: dict):
     """
     Função para filtrar pontos e salvar em listas individuais
 
@@ -31,18 +32,17 @@ def pos_filter(in_data: DataFrame,
     :param l_pos:
     :param l_info:
     :param tag_cut_depth:
+    :param config_pontos:
     :return:
     """
 
     print('- Lendo tag do clp para a configuração dos filtros de pontos')
     ######################################################################################
-    tag = read_tags('ConfigPontos')
-    ######################################################################################
-    limit_D = tag['Diff_AngleD']
-    limit_C = tag['Diff_AngleC']
-    limit_XYZ = tag['Dist_XYZ']
-    limit_h = tag['Dist_H']
-    p = tag[tag_cut_depth]
+    limit_D = config_pontos['Diff_AngleD']
+    limit_C = config_pontos['Diff_AngleC']
+    limit_XYZ = config_pontos['Dist_XYZ']
+    limit_h = config_pontos['Dist_H']
+    p = config_pontos[tag_cut_depth]
     ######################################################################################
     print(f'''
     - Ajustes para filtro de posição:
@@ -102,7 +102,7 @@ def pos_filter(in_data: DataFrame,
     print('- Entrando no loop while para filtrar os pontos')
     while pos_1 <= len(in_data.index):
 
-        if (pos_1 + 2) < len(in_data.index):
+        if (pos_1 + 4) < len(in_data.index):
             while True:
                 #################################################################################################
                 dist_XYZ = dist_between_points(in_data, pos_1, pos_2)  # Calc distance between points
@@ -183,7 +183,7 @@ def pos_filter(in_data: DataFrame,
                     lx.append(round(cut_depth_x(in_data, pos_2, p), 1))
                     ly.append(round(cut_depth_y(in_data, pos_2, p), 1))
                     lz.append(round(cut_depth_z(in_data, pos_2, p), 1))
-                    ld.append(round(calc_attack_angle(in_data, (pos_2)), 1))
+                    ld.append(round(calc_attack_angle(in_data, pos_2), 1))
                     ##################################################################
                     # Check if the limits of "C" are between 180 and -180
                     ##################################################################

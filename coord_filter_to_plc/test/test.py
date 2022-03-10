@@ -45,9 +45,3 @@ def test_file(file_path: str,
 
     return num_pos_orig_file
 
-
-
-    '''plt.plot(data_list_X, data_list_Y)
-    # plt.savefig(f'{os.getcwd()}\\log\\{today} {now_Hour}_{now_Minute}_{now_Second}.png')
-    plt.show()
-    print(len(data_list_X))'''

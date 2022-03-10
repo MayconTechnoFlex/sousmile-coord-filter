@@ -1,7 +1,7 @@
 import time, traceback, sys
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 from pycomm3.exceptions import CommError
-from utils.data.comm_plc import read_tags
+from utils.data.comm_plc import read_tags, read_multiple
 
 
 sleep_time = 0.8
@@ -31,7 +31,7 @@ class WorkerSignals(QObject):
     """
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
-    result_multiples = pyqtSignal(object, object, object, object, object)
+    result_multiples = pyqtSignal(object, object, object, object, object, object)
 
 
 class Worker_PLC(QRunnable, WorkerParent):
@@ -47,29 +47,33 @@ class Worker_PLC(QRunnable, WorkerParent):
     @pyqtSlot()
     def run(self):
         while self.running:
-            print
             try:
-                if type(read_tags('ConfigPontos')) == CommError\
-                        or type(read_tags('DataCtrl_A1')) == CommError\
-                        or type(read_tags('DataCtrl_A2')) == CommError\
-                        or type(read_tags('DataCtrl_B1')) == CommError\
-                        or type(read_tags('DataCtrl_B2')) == CommError:
+                tag_list = ['ConfigPontos', 'DataCtrl_A1', 'DataCtrl_A2', 'DataCtrl_B1', 'DataCtrl_B2', 'HMI']
+
+                tags = read_multiple(tag_list)
+                config_pontos = tags[0][1]
+                data_ctrl_a1 = tags[1][1]
+                data_ctrl_a2 = tags[2][1]
+                data_ctrl_b1 = tags[3][1]
+                data_ctrl_b2 = tags[4][1]
+                HMI = tags[5][1]
+
+                if type(config_pontos) == CommError\
+                    or type(data_ctrl_a1) == CommError\
+                    or type(data_ctrl_a2) == CommError\
+                    or type(data_ctrl_b1) == CommError\
+                    or type(data_ctrl_b2) == CommError:
                     traceback.print_exc()
                     exctype, value = sys.exc_info()[:2]
                     self.signal_worker.error.emit((exctype, value, traceback.format_exc()))
                     raise Exception("connection failed")
                 else:
-                    config_pontos = read_tags('ConfigPontos')
-                    datactrla1 = read_tags('DataCtrl_A1')
-                    datactrla2 = read_tags('DataCtrl_A2')
-                    datactrlb1 = read_tags('DataCtrl_B1')
-                    datactrlb2 = read_tags('DataCtrl_B2')
-
                     self.signal_worker.result_multiples.emit(config_pontos,
-                                                             datactrla1,
-                                                             datactrla2,
-                                                             datactrlb1,
-                                                             datactrlb2)
+                                                             data_ctrl_a1,
+                                                             data_ctrl_a2,
+                                                             data_ctrl_b1,
+                                                             data_ctrl_b2,
+                                                             HMI)
             except Exception as e:
                 print(f'{e} Worker - workers.py')
                 time.sleep(3)

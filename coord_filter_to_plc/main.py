@@ -3,7 +3,9 @@
 ########################################
 import sys
 import os
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidget , QTableWidgetItem, QGraphicsScene
+import time
+from typing import List
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QGraphicsScene
 from PyQt5.QtCore import QThreadPool, QThread, QRectF, Qt
 from PyQt5.QtGui import QIcon, QPen
 from ui_py.gui import Ui_MainWindow
@@ -36,7 +38,7 @@ class CoordFilter(QMainWindow):
         self.myworker_plc = Worker_PLC()
         self.myworker_test = Worker_Test()
 
-        self.myworker_plc.signal_worker.result.connect(self.plc_routine)
+        self.myworker_plc.signal_worker.result_multiples.connect(self.plc_routine)
         self.myworker_plc.signal_worker.error.connect(self.runnable_error_plc)  # signal when we have a plc comm error
         #####################################################################
         # Button call function to start test of filter positoins with a file
@@ -47,10 +49,10 @@ class CoordFilter(QMainWindow):
         self.mythread_plc.start(self.myworker_plc)
         self.mythread_test.start(self.myworker_test)
 
-        ######################################
-
+        #########################################################################
+        # Setting default status
+        #########################################################################
         self.ui.rb_cloud_file.setChecked(True)
-        self.ui.ico_cloud.setEnabled(True)
         self.ui.btn_search_file.setEnabled(False)
         self.ui.le_file_path.setEnabled(False)
 
@@ -58,7 +60,11 @@ class CoordFilter(QMainWindow):
         self.ui.btn_search_file_for_test.setEnabled(False)
         self.ui.le_file_for_test.setEnabled(False)
         self.ui.btn_test_file.setEnabled(False)
-
+        #########################################################################
+        # Signal that the transfer is ON
+        #########################################################################
+        self.transfer_data = False
+        #########################################################################
         self.ui.rb_cloud_file.toggled.connect(self.set_cloud_file)
         self.ui.rb_local_file.toggled.connect(self.set_local_file)
 
@@ -83,35 +89,33 @@ class CoordFilter(QMainWindow):
         self.list_pos_d: List[float] = []
         self.list_pos: List[int] = []
         self.list_pos_info: List[str] = []
-        ###################################
+        #######################################
+        # Create graphic
+        #######################################
+        # Defining a scene rect of 400x200, with it's origin at 0,0.
+        # If we don't set this on creation, we can set it later with .setSceneRect
+        self.scene = QGraphicsScene(-70, -41, 140, 82)
     
     def show_config(self):
         self.ui.stackedWidget.setCurrentWidget(self.ui.config_screen)
         self.ui.lbl_screen_title.setText("Configurações")
 
-
     def show_home(self):
         self.ui.stackedWidget.setCurrentWidget(self.ui.main_screen)
         self.ui.lbl_screen_title.setText("Home")
 
-
     def set_cloud_file(self):
-        self.ui.ico_cloud.setEnabled(True)
         self.ui.btn_search_file.setEnabled(False)
         self.ui.le_file_path.setEnabled(False)
 
-
     def set_local_file(self):
-        self.ui.ico_cloud.setEnabled(False)
         self.ui.btn_search_file.setEnabled(True)
         self.ui.le_file_path.setEnabled(True)
-
 
     def set_file_to_plc(self):
         self.ui.btn_search_file_for_test.setEnabled(False)
         self.ui.le_file_for_test.setEnabled(False)
         self.ui.btn_test_file.setEnabled(False)
-
 
     def set_file_to_test(self):
         self.ui.btn_search_file_for_test.setEnabled(True)
@@ -121,83 +125,96 @@ class CoordFilter(QMainWindow):
     def start_test(self):
         self.test_signal = True
 
-
     def search_folder(self):
         path_name = QFileDialog.getExistingDirectory(self, "Selecione um arquivo", os.getcwd())
         self.ui.le_file_path.setText(path_name)
-
 
     def search_file_for_test(self):
         path_file_name = QFileDialog.getOpenFileName(self, "Selecione um arquivo", os.getcwd(), "*.csv")
         self.ui.le_file_for_test.setText(path_file_name[0])
 
-
-    def plc_routine(self, configpontos, data_ctrl_a1, data_ctrl_a2, data_ctrl_b1, data_ctrl_b2):
+    def plc_routine(self, configpontos, data_ctrl_a1, data_ctrl_a2, data_ctrl_b1, data_ctrl_b2, HMI):
         print('- Comunicação de dados utilizando Python com CLP Rockwell')
-        while True:
-            if self.ui.rb_plc.isChecked():
-                print("Coletando do CLP")
-                ##############################################
-                # Wait trigger A1
-                ##############################################
-                try:
-                    if data_ctrl_a1['Trigger']:
-                        data_to_plc('DataCtrl_A1',
-                                    'CutDepthA1',
-                                    'HMI.EnableLog',
-                                    'HMI.NumPosMax',
-                                    'ConfigPontos.DistVar',
-                                    self.ui.rb_cloud_file.isEnabled(),
-                                    self.ui.rb_local_file.isEnabled(),
-                                    self.ui.le_file_path.text())
-                except Exception as e:
-                    print(f'{e} - trying to read DataCtrl_A1')
-                ##############################################
-                # Wait trigger A2
-                ##############################################
-                try:
-                    if data_ctrl_a2['Trigger']:
-                        data_to_plc('DataCtrl_A2',
-                                    'CutDepthA2',
-                                    'HMI.EnableLog',
-                                    'HMI.NumPosMax',
-                                    'ConfigPontos.DistVar',
-                                    self.ui.rb_cloud_file.isEnabled(),
-                                    self.ui.rb_local_file.isEnabled(),
-                                    self.ui.le_file_path.text())
-                except Exception as e:
-                    print(f'{e} - trying to read DataCtrl_A2')
-                ##############################################
-                # Wait trigger B1
-                ##############################################
-                try:
-                    if data_ctrl_b1['Trigger']:
-                        data_to_plc('DataCtrl_B1',
-                                    'CutDepthB1',
-                                    'HMI.EnableLog',
-                                    'HMI.NumPosMax',
-                                    'ConfigPontos.DistVar',
-                                    self.ui.rb_cloud_file.isEnabled(),
-                                    self.ui.rb_local_file.isEnabled(),
-                                    self.ui.le_file_path.text())
-                except Exception as e:
-                    print(f'{e} - trying to read DataCtrl_B1')
-                ##############################################
-                # Wait trigger B2
-                ##############################################
-                try:
-                    if data_ctrl_b2['Trigger']:
-                        data_to_plc('DataCtrl_B2',
-                                    'CutDepthB2',
-                                    'HMI.EnableLog',
-                                    'HMI.NumPosMax',
-                                    'ConfigPontos.DistVar',
-                                    self.ui.rb_cloud_file.isEnabled(),
-                                    self.ui.rb_local_file.isEnabled(),
-                                    self.ui.le_file_path.text())
-                except Exception as e:
-                    print(f'{e} - trying to read DataCtrl_B2')
 
+        if self.ui.rb_plc.isChecked():
+            ##############################################
+            # Wait trigger A1
+            ##############################################
+            try:
+                if data_ctrl_a1['Trigger'] and not self.transfer_data:
+                    self.transfer_data = True
+                    data_to_plc(data_ctrl_a1,
+                                'CutDepthA1',
+                                HMI['EnableLog'],
+                                HMI['NumPosMax'],
+                                configpontos,
+                                'DataCtrl_A1',
+                                self.ui.rb_cloud_file.isChecked(),
+                                self.ui.rb_local_file.isChecked(),
+                                self.ui.le_file_path.text(),
+                                self.ui,
+                                self.scene)
+            except Exception as e:
+                print(f'{e} - trying to read DataCtrl_A1')
+            ##############################################
+            # Wait trigger A2
+            ##############################################
+            try:
+                if data_ctrl_a2['Trigger'] and not self.transfer_data:
+                    self.transfer_data = True
+                    data_to_plc(data_ctrl_a2,
+                                'CutDepthA2',
+                                HMI['EnableLog'],
+                                HMI['NumPosMax'],
+                                configpontos,
+                                'DataCtrl_A2',
+                                self.ui.rb_cloud_file.isChecked(),
+                                self.ui.rb_local_file.isChecked(),
+                                self.ui.le_file_path.text(),
+                                self.ui,
+                                self.scene)
+            except Exception as e:
+                print(f'{e} - trying to read DataCtrl_A2')
+            ##############################################
+            # Wait trigger B1
+            ##############################################
+            try:
+                if data_ctrl_b1['Trigger'] and not self.transfer_data:
+                    self.transfer_data = True
+                    data_to_plc(data_ctrl_b1,
+                                'CutDepthB1',
+                                HMI['EnableLog'],
+                                HMI['NumPosMax'],
+                                configpontos,
+                                'DataCtrl_B1',
+                                self.ui.rb_cloud_file.isChecked(),
+                                self.ui.rb_local_file.isChecked(),
+                                self.ui.le_file_path.text(),
+                                self.ui,
+                                self.scene)
+            except Exception as e:
+                print(f'{e} - trying to read DataCtrl_B1')
+            ##############################################
+            # Wait trigger B2
+            ##############################################
+            try:
+                if data_ctrl_b2['Trigger']and not self.transfer_data:
+                    self.transfer_data = True
+                    data_to_plc(data_ctrl_b2,
+                                'CutDepthB2',
+                                HMI['EnableLog'],
+                                HMI['NumPosMax'],
+                                configpontos,
+                                'DataCtrl_B2',
+                                self.ui.rb_cloud_file.isChecked(),
+                                self.ui.rb_local_file.isChecked(),
+                                self.ui.le_file_path.text(),
+                                self.ui,
+                                self.scene)
+            except Exception as e:
+                print(f'{e} - trying to read DataCtrl_B2')
+
+            self.transfer_data = False
 
     def test_routine(self, signal):
 
@@ -223,6 +240,9 @@ class CoordFilter(QMainWindow):
                       self.list_pos, self.list_pos_info, var_limit_d=25.0, var_limit_c=5.0, var_limit_xyz=1.5,
                       var_limit_h=0.04, var_p=0.5)
             #######################################
+            for n in range(self.ui.tbl_positions.rowCount()):
+                self.ui.tbl_positions.removeRow(n)
+
             custom_header_list = ["Posições", "X", "Y", "Z", "C", "D", "Info"]
             qt_create_table(self.ui.tbl_positions,
                             7,
@@ -231,16 +251,6 @@ class CoordFilter(QMainWindow):
                             hor_header=False,
                             ver_header=True,
                             custom_header=True)
-            #######################################
-            # Create grafic
-            #######################################
-            # Defining a scene rect of 400x200, with it's origin at 0,0.
-            # If we don't set this on creation, we can set it later with .setSceneRect
-            scene = QGraphicsScene(-70, -41, 140, 82)
-
-
-
-
             #######################################
             for i in range(len(self.list_pos)):
                 if i > 0:
@@ -253,9 +263,9 @@ class CoordFilter(QMainWindow):
                     self.ui.tbl_positions.setItem(i, 6, QTableWidgetItem(str(self.list_pos_info[i])))  #.setText(str(self.list_pos_info[i])))
                     self.ui.tbl_positions.resizeColumnsToContents()
 
-                    scene.addEllipse(QRectF(self.list_pos_x[i], self.list_pos_y[i], 0.2, 0.2), QPen(Qt.blue))
+                    self.scene.addEllipse(QRectF(self.list_pos_x[i], self.list_pos_y[i], 0.2, 0.2), QPen(Qt.blue))
 
-            self.ui.graphicsView.setScene(scene)
+            self.ui.graphicsView.setScene(self.scene)
             self.ui.graphicsView.scale(3, 3)
             self.ui.graphicsView.show()
 
@@ -277,16 +287,13 @@ class CoordFilter(QMainWindow):
             self.test_signal = False
             #######################################
 
-
     def runnable_error_plc(self):
         if self.ui.rb_plc.isChecked():
             print("Erro no worker de envio de dados para o CLP")
 
-
     def runnable_error_test(self):
         if self.ui.rb_teste.isChecked():
             print("Erro no worker para o teste de arquivo local")
-
 
     def stop_threads(self):
         print("Finalizando Threads")
@@ -295,8 +302,6 @@ class CoordFilter(QMainWindow):
         except Exception as e:
             print(f"{e} -> main.py - stop_threads")
         print("Threads finalizadas")
-
-
 
 
 if __name__ == '__main__':

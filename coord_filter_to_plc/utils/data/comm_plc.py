@@ -1,4 +1,5 @@
 from pycomm3 import LogixDriver
+from typing import List
 
 IP_ADDRESS = '192.168.1.10'
 
@@ -22,3 +23,9 @@ def read_tags(tag_name: str):
     except Exception as e:
         print(f"{e} - Error on plc communication")
         return e
+
+
+def read_multiple(tag_list: List):
+    with LogixDriver(IP_ADDRESS) as plc:
+        tags = tag_list
+        return plc.read(*tags)
