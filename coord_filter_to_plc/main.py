@@ -6,8 +6,8 @@ import os
 import time
 from typing import List
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QTableWidgetItem, QGraphicsScene
-from PyQt5.QtCore import QThreadPool, QThread, QRectF, Qt
-from PyQt5.QtGui import QIcon, QPen
+from PyQt5.QtCore import QThreadPool, QThread, QRectF, Qt, QRegExp
+from PyQt5.QtGui import QIcon, QPen, QRegExpValidator
 from ui_py.gui import Ui_MainWindow
 
 from utils.data.plc import data_to_plc
@@ -15,20 +15,13 @@ from utils.data.comm_plc import read_tags
 from utils.workers import *
 from utils.qt_utils import qt_create_table
 from test.test import test_file
-
 ########################################
-
 
 class CoordFilter(QMainWindow):
     def __init__(self):
         super(CoordFilter, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-
-        self.ui.stackedWidget.setCurrentWidget(self.ui.main_screen)
-        self.ui.lbl_screen_title.setText("Home")
-        self.setWindowTitle("Coord Filter RN")
-
         #######################################
         # Thread
         #######################################
@@ -40,30 +33,42 @@ class CoordFilter(QMainWindow):
 
         self.myworker_plc.signal_worker.result_multiples.connect(self.plc_routine)
         self.myworker_plc.signal_worker.error.connect(self.runnable_error_plc)  # signal when we have a plc comm error
-        #####################################################################
-        # Button call function to start test of filter positoins with a file
-        #####################################################################
         self.myworker_test.signal_worker_test.result.connect(self.start_test)
         self.myworker_test.signal_worker_test.error.connect(self.runnable_error_test)  # signal when we have a plc comm error
-
+        #####################################################################
+        # Button call function to start test of filter positions with a file
+        #####################################################################
         self.mythread_plc.start(self.myworker_plc)
         self.mythread_test.start(self.myworker_test)
-
         #########################################################################
-        # Setting default status
+        # Initial Settings
         #########################################################################
-        self.ui.rb_cloud_file.setChecked(True)
-        self.ui.btn_search_file.setEnabled(False)
-        self.ui.le_file_path.setEnabled(False)
-
-        self.ui.rb_plc.setChecked(True)
-        self.ui.btn_search_file_for_test.setEnabled(False)
-        self.ui.le_file_for_test.setEnabled(False)
-        self.ui.btn_test_file.setEnabled(False)
+        self.ui.ico_local_file.setEnabled(False)
+        self.ui.ico_test_file.setEnabled(False)
+        #########################################################################
+        # Signal and values to input limits
+        #########################################################################
+        self.test_file_selected = False
+        self.inputting_values = False
+        self.limit_dist_xyz = float(self.ui.le_var_dist_pts.text())
+        self.limit_c = float(self.ui.le_var_c.text())
+        self.limit_d = float(self.ui.le_var_d.text())
+        self.limit_h = float(self.ui.le_var_h.text())
+        self.limit_p = float(self.ui.le_var_p.text())
+        #########################################################################
+        # Setting RegEx to LineEdits
+        #########################################################################
+        self.regex = QRegExp(r"[0-9]?[0-9]?\.[0-9][0-9]?")
+        self.validator = QRegExpValidator(self.regex)
+        self.ui.le_var_dist_pts.setValidator(self.validator)
+        self.ui.le_var_c.setValidator(self.validator)
+        self.ui.le_var_d.setValidator(self.validator)
+        self.ui.le_var_h.setValidator(self.validator)
+        self.ui.le_var_p.setValidator(self.validator)
         #########################################################################
         # Signal that the transfer is ON
         #########################################################################
-        self.transfer_data = False
+        self.transferring_data = False
         #########################################################################
         self.ui.rb_cloud_file.toggled.connect(self.set_cloud_file)
         self.ui.rb_local_file.toggled.connect(self.set_local_file)
@@ -76,8 +81,7 @@ class CoordFilter(QMainWindow):
         self.ui.btn_search_file_for_test.clicked.connect(self.search_file_for_test)
         self.ui.btn_test_file.clicked.connect(self.test_routine)
 
-        self.ui.btn_goto_home_sreen.clicked.connect(self.show_home)
-        self.ui.btn_goto_config_screen.clicked.connect(self.show_config)
+        self.ui.btn_input_values.clicked.connect(self.input_values)
         ##################################
         # Variables used to test a file
         ##################################
@@ -95,32 +99,88 @@ class CoordFilter(QMainWindow):
         # Defining a scene rect of 400x200, with it's origin at 0,0.
         # If we don't set this on creation, we can set it later with .setSceneRect
         self.scene = QGraphicsScene(-70, -41, 140, 82)
-    
-    def show_config(self):
-        self.ui.stackedWidget.setCurrentWidget(self.ui.config_screen)
-        self.ui.lbl_screen_title.setText("Configurações")
-
-    def show_home(self):
-        self.ui.stackedWidget.setCurrentWidget(self.ui.main_screen)
-        self.ui.lbl_screen_title.setText("Home")
+        self.ui.graphicsView.setScene(self.scene)
+        self.ui.graphicsView.scale(3, 3)
+        self.ui.tbl_positions.horizontalHeader().setVisible(False)
+        self.ui.tbl_positions.verticalHeader().setVisible(False)
 
     def set_cloud_file(self):
         self.ui.btn_search_file.setEnabled(False)
         self.ui.le_file_path.setEnabled(False)
+        self.ui.ico_local_file.setEnabled(False)
+        self.ui.ico_cloud.setEnabled(True)
 
     def set_local_file(self):
         self.ui.btn_search_file.setEnabled(True)
         self.ui.le_file_path.setEnabled(True)
+        self.ui.ico_local_file.setEnabled(True)
+        self.ui.ico_cloud.setEnabled(False)
 
     def set_file_to_plc(self):
         self.ui.btn_search_file_for_test.setEnabled(False)
         self.ui.le_file_for_test.setEnabled(False)
         self.ui.btn_test_file.setEnabled(False)
+        self.ui.btn_input_values.setEnabled(False)
+        self.ui.ico_test_file.setEnabled(False)
+        self.ui.ico_plc.setEnabled(True)
 
     def set_file_to_test(self):
         self.ui.btn_search_file_for_test.setEnabled(True)
         self.ui.le_file_for_test.setEnabled(True)
-        self.ui.btn_test_file.setEnabled(True)
+        if self.test_file_selected:
+            self.ui.btn_test_file.setEnabled(True)
+        else:
+            self.ui.btn_test_file.setEnabled(False)
+        self.ui.btn_input_values.setEnabled(True)
+        self.ui.ico_test_file.setEnabled(True)
+        self.ui.ico_plc.setEnabled(False)
+
+    def input_values(self):
+        if self.inputting_values:
+            self.inputting_values = False
+            self.ui.btn_input_values.setText("Mudar\nvalores")
+            self.ui.btn_test_file.setEnabled(True)
+
+            self.ui.le_var_dist_pts.setEnabled(False)
+            self.ui.le_var_c.setEnabled(False)
+            self.ui.le_var_d.setEnabled(False)
+            self.ui.le_var_h.setEnabled(False)
+            self.ui.le_var_p.setEnabled(False)
+
+            if not self.ui.le_var_dist_pts.text():
+                self.ui.le_var_dist_pts.setText(self.limit_dist_xyz)
+            else:
+                self.limit_dist_xyz = float(self.ui.le_var_dist_pts.text())
+
+            if not self.ui.le_var_c.text():
+                self.ui.le_var_c.setText(self.limit_c)
+            else:
+                self.limit_c = float(self.ui.le_var_c.text())
+
+            if not self.ui.le_var_d.text():
+                self.ui.le_var_d.setText(self.limit_d)
+            else:
+                self.limit_d = float(self.ui.le_var_d.text())
+
+            if not self.ui.le_var_h.text():
+                self.ui.le_var_h.setText(self.limit_h)
+            else:
+                self.limit_h = float(self.ui.le_var_h.text())
+
+            if not self.ui.le_var_p.text():
+                self.ui.le_var_p.setText(self.limit_p)
+            else:
+                self.limit_p = float(self.ui.le_var_p.text())
+
+        else:
+            self.inputting_values = True
+            self.ui.btn_input_values.setText("Confirmar\nmudança")
+            self.ui.btn_test_file.setEnabled(False)
+            self.ui.le_var_dist_pts.setEnabled(True)
+            self.ui.le_var_c.setEnabled(True)
+            self.ui.le_var_d.setEnabled(True)
+            self.ui.le_var_h.setEnabled(True)
+            self.ui.le_var_p.setEnabled(True)
 
     def start_test(self):
         self.test_signal = True
@@ -132,6 +192,9 @@ class CoordFilter(QMainWindow):
     def search_file_for_test(self):
         path_file_name = QFileDialog.getOpenFileName(self, "Selecione um arquivo", os.getcwd(), "*.csv")
         self.ui.le_file_for_test.setText(path_file_name[0])
+        if self.ui.le_file_for_test.text():
+            self.test_file_selected = True
+            self.ui.btn_test_file.setEnabled(True)
 
     def plc_routine(self, configpontos, data_ctrl_a1, data_ctrl_a2, data_ctrl_b1, data_ctrl_b2, HMI):
         print('- Comunicação de dados utilizando Python com CLP Rockwell')
@@ -141,8 +204,8 @@ class CoordFilter(QMainWindow):
             # Wait trigger A1
             ##############################################
             try:
-                if data_ctrl_a1['Trigger'] and not self.transfer_data:
-                    self.transfer_data = True
+                if data_ctrl_a1['Trigger'] and not self.transferring_data:
+                    self.transferring_data = True
                     data_to_plc(data_ctrl_a1,
                                 'CutDepthA1',
                                 HMI['EnableLog'],
@@ -160,8 +223,8 @@ class CoordFilter(QMainWindow):
             # Wait trigger A2
             ##############################################
             try:
-                if data_ctrl_a2['Trigger'] and not self.transfer_data:
-                    self.transfer_data = True
+                if data_ctrl_a2['Trigger'] and not self.transferring_data:
+                    self.transferring_data = True
                     data_to_plc(data_ctrl_a2,
                                 'CutDepthA2',
                                 HMI['EnableLog'],
@@ -179,8 +242,8 @@ class CoordFilter(QMainWindow):
             # Wait trigger B1
             ##############################################
             try:
-                if data_ctrl_b1['Trigger'] and not self.transfer_data:
-                    self.transfer_data = True
+                if data_ctrl_b1['Trigger'] and not self.transferring_data:
+                    self.transferring_data = True
                     data_to_plc(data_ctrl_b1,
                                 'CutDepthB1',
                                 HMI['EnableLog'],
@@ -198,8 +261,8 @@ class CoordFilter(QMainWindow):
             # Wait trigger B2
             ##############################################
             try:
-                if data_ctrl_b2['Trigger']and not self.transfer_data:
-                    self.transfer_data = True
+                if data_ctrl_b2['Trigger']and not self.transferring_data:
+                    self.transferring_data = True
                     data_to_plc(data_ctrl_b2,
                                 'CutDepthB2',
                                 HMI['EnableLog'],
@@ -214,7 +277,7 @@ class CoordFilter(QMainWindow):
             except Exception as e:
                 print(f'{e} - trying to read DataCtrl_B2')
 
-            self.transfer_data = False
+            self.transferring_data = False
 
     def test_routine(self, signal):
 
@@ -237,36 +300,33 @@ class CoordFilter(QMainWindow):
             print("Inicio da execução do teste de filtros")
             ###############################################
             test_file(file_path, self.list_pos_x, self.list_pos_y, self.list_pos_z, self.list_pos_c, self.list_pos_d,
-                      self.list_pos, self.list_pos_info, var_limit_d=25.0, var_limit_c=5.0, var_limit_xyz=1.5,
-                      var_limit_h=0.04, var_p=0.5)
+                      self.list_pos, self.list_pos_info, self.limit_d, self.limit_c, self.limit_dist_xyz, self.limit_h,
+                      self.limit_p)
             #######################################
             for n in range(self.ui.tbl_positions.rowCount()):
                 self.ui.tbl_positions.removeRow(n)
 
-            custom_header_list = ["Posições", "X", "Y", "Z", "C", "D", "Info"]
+            self.scene.clear()
+            self.ui.graphicsView.scene().clear()
+            self.ui.graphicsView.update()
+
             qt_create_table(self.ui.tbl_positions,
                             7,
-                            len(self.list_pos),
-                            custom_header_list,
-                            hor_header=False,
-                            ver_header=True,
-                            custom_header=True)
-            #######################################
+                            len(self.list_pos))
+
             for i in range(len(self.list_pos)):
-                if i > 0:
-                    self.ui.tbl_positions.setItem(i, 0, QTableWidgetItem(str(self.list_pos[i])))  #.setText(str(self.list_pos[i])))
-                    self.ui.tbl_positions.setItem(i, 1, QTableWidgetItem(str(self.list_pos_x[i])))  #.setText(str(self.list_pos_x[i])))
-                    self.ui.tbl_positions.setItem(i, 2, QTableWidgetItem(str(self.list_pos_y[i])))  #.setText(str(self.list_pos_y[i])))
-                    self.ui.tbl_positions.setItem(i, 3, QTableWidgetItem(str(self.list_pos_z[i])))  #.setText(str(self.list_pos_z[i])))
-                    self.ui.tbl_positions.setItem(i, 4, QTableWidgetItem(str(self.list_pos_c[i])))  #.setText(str(self.list_pos_c[i])))
-                    self.ui.tbl_positions.setItem(i, 5, QTableWidgetItem(str(self.list_pos_d[i])))  #.setText(str(self.list_pos_d[i])))
-                    self.ui.tbl_positions.setItem(i, 6, QTableWidgetItem(str(self.list_pos_info[i])))  #.setText(str(self.list_pos_info[i])))
-                    self.ui.tbl_positions.resizeColumnsToContents()
+                self.ui.tbl_positions.setItem(i, 0, QTableWidgetItem(str(self.list_pos[i])))
+                self.ui.tbl_positions.setItem(i, 1, QTableWidgetItem(str(self.list_pos_x[i])))
+                self.ui.tbl_positions.setItem(i, 2, QTableWidgetItem(str(self.list_pos_y[i])))
+                self.ui.tbl_positions.setItem(i, 3, QTableWidgetItem(str(self.list_pos_z[i])))
+                self.ui.tbl_positions.setItem(i, 4, QTableWidgetItem(str(self.list_pos_c[i])))
+                self.ui.tbl_positions.setItem(i, 5, QTableWidgetItem(str(self.list_pos_d[i])))
+                self.ui.tbl_positions.setItem(i, 6, QTableWidgetItem(str(self.list_pos_info[i])))
+                self.ui.tbl_positions.resizeColumnsToContents()
 
-                    self.scene.addEllipse(QRectF(self.list_pos_x[i], self.list_pos_y[i], 0.2, 0.2), QPen(Qt.blue))
+                self.scene.addEllipse(QRectF(self.list_pos_x[i], self.list_pos_y[i], 0.2, 0.2), QPen(Qt.blue))
 
-            self.ui.graphicsView.setScene(self.scene)
-            self.ui.graphicsView.scale(3, 3)
+            self.ui.graphicsView.update()
             self.ui.graphicsView.show()
 
             #######################################
@@ -299,6 +359,7 @@ class CoordFilter(QMainWindow):
         print("Finalizando Threads")
         try:
             self.myworker_plc.stop()
+            self.myworker_test.stop()
         except Exception as e:
             print(f"{e} -> main.py - stop_threads")
         print("Threads finalizadas")
@@ -307,10 +368,8 @@ class CoordFilter(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_win = CoordFilter()
-    main_win.setFixedHeight(600)
-    main_win.setFixedWidth(1176)
     main_win.show()
-    main_win.setWindowIcon(QIcon("assets/rn.ico"))
+    main_win.setWindowIcon(QIcon("./assets/rn.ico"))
     app.aboutToQuit.connect(main_win.stop_threads)
     sys.exit(app.exec_())
 

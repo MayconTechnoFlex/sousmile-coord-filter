@@ -107,7 +107,7 @@ def pos_filter(in_data: DataFrame,
 
     while pos_1 <= len(in_data.index):
 
-        if (pos_1 + 2) < len(in_data.index):
+        if (pos_1 + 4) < len(in_data.index):
             while True:
                 #################################################################################################
                 dist_XYZ = dist_between_points(in_data, pos_1, pos_2)  # Calc distance between points
@@ -179,9 +179,8 @@ def pos_filter(in_data: DataFrame,
                             f'Limite XYZ e C: {round(dist_XYZ, 1)}/ {round(h, 3)}')
                     else:
                         l_info.append(
-                            f'''
-                                Todos os limites: H:{round(h, 3)}/ C:{round(difference_C, 1)}/
-                                D:{round(difference_D, 1)}/ XYZ:{round(dist_XYZ, 1)}''')
+                            f'Todos os limites: H:{round(h, 3)}/ C:{round(difference_C, 1)}/ '
+                            f'D:{round(difference_D, 1)}/ XYZ:{round(dist_XYZ, 1)}')
                     ##########################################################
                     # Add the position to the list
                     ##########################################################
