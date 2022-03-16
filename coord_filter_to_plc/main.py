@@ -15,9 +15,7 @@ from utils.data.comm_plc import read_tags
 from utils.workers import *
 from utils.qt_utils import qt_create_table
 from test.test import test_file
-
 ########################################
-
 
 class CoordFilter(QMainWindow):
     def __init__(self):
@@ -35,12 +33,11 @@ class CoordFilter(QMainWindow):
 
         self.myworker_plc.signal_worker.result_multiples.connect(self.plc_routine)
         self.myworker_plc.signal_worker.error.connect(self.runnable_error_plc)  # signal when we have a plc comm error
+        self.myworker_test.signal_worker_test.result.connect(self.start_test)
+        self.myworker_test.signal_worker_test.error.connect(self.runnable_error_test)  # signal when we have a plc comm error
         #####################################################################
         # Button call function to start test of filter positions with a file
         #####################################################################
-        self.myworker_test.signal_worker_test.result.connect(self.start_test)
-        self.myworker_test.signal_worker_test.error.connect(self.runnable_error_test)  # signal when we have a plc comm error
-
         self.mythread_plc.start(self.myworker_plc)
         self.mythread_test.start(self.myworker_test)
         #########################################################################
@@ -372,7 +369,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_win = CoordFilter()
     main_win.show()
-    main_win.setWindowIcon(QIcon("assets/rn.ico"))
+    main_win.setWindowIcon(QIcon("./assets/rn.ico"))
     app.aboutToQuit.connect(main_win.stop_threads)
     sys.exit(app.exec_())
 
