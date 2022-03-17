@@ -1,10 +1,12 @@
-import time, traceback, sys
+import traceback
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 from pycomm3.exceptions import CommError
-from utils.data.comm_plc import read_tags, read_multiple
+from utils.data.comm_plc import read_multiple
 
+from utils.functions.serial_ports import get_my_port, set_my_port
+from serial import *
 
-sleep_time = 0.8
+sleep_time = 1.0
 stop_time = 0.2
 
 
@@ -32,6 +34,7 @@ class WorkerSignals(QObject):
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
     result_multiples = pyqtSignal(object, object, object, object, object, object)
+    result_list = pyqtSignal(list)
 
 
 class Worker_PLC(QRunnable, WorkerParent):
@@ -95,3 +98,104 @@ class Worker_Test(QRunnable, WorkerParent):
         while self.running:
             self.signal_worker_test.result.emit(True)
             time.sleep(sleep_time)
+
+
+class Worker_BarCodeScanner(QRunnable, WorkerParent):
+    """
+    Worker thread
+    """
+    def __init__(self, *args):
+        super(Worker_BarCodeScanner, self).__init__()
+        self.signal = WorkerSignals()
+        self.info: str
+        self.code: int
+        self.running = True
+        self.device_connected = False
+        self.create_device()
+        self.port = get_my_port()
+        self.code_read: str = ""
+        self.read_a1: bool = False
+        self.read_a2: bool = False
+        self.read_b1: bool = False
+        self.read_b2: bool = False
+        self.read_complete: bool = False
+        self.list_signal: list = []
+
+    def create_device(self):
+        self.port = get_my_port()
+        time.sleep(1)
+        try:
+            if self.port:
+                self.device = Serial(self.port, timeout=0.5)
+                self.device_connected = True
+                print("Dispositivo conectado")
+            else:
+                raise Exception("Nenhuma ou mais de uma porta serial encontrada")
+        except Exception as e:
+            print(e)
+            time.sleep(2)
+
+    @pyqtSlot()
+    def run(self):
+        while self.running:
+            if self.device_connected:
+                try:
+                    if not self.device.isOpen():
+                        self.device.open()
+                    else:
+                        self.info = str(self.device.readline())
+                        self.code_size = len(self.info)
+                        if self.code_size > 4:
+                            self.code_read = self.info[2:(self.code_size - 3)]
+                            print(f"Código do leitor: {self.code_read}")
+                            if self.code_read == "A1":
+                                self.read_a1 = True
+                                self.read_a2 = False
+                                self.read_b1 = False
+                                self.read_b2 = False
+                            elif self.code_read == "A2":
+                                self.read_a1 = False
+                                self.read_a2 = True
+                                self.read_b1 = False
+                                self.read_b2 = False
+                            elif self.code_read == "B1":
+                                self.read_a1 = False
+                                self.read_a2 = False
+                                self.read_b1 = True
+                                self.read_b2 = False
+                            elif self.code_read == "B2":
+                                self.read_a1 = False
+                                self.read_a2 = False
+                                self.read_b1 = False
+                                self.read_b2 = True
+                            elif self.read_a1:
+                                self.list_signal = [self.code_read, "A1"]
+                                self.signal.result_list.emit(self.list_signal)
+                                self.read_a1 = False
+                            elif self.read_a2:
+                                self.list_signal = [self.code_read, "A2"]
+                                self.signal.result_list.emit(self.list_signal)
+                                self.read_a2 = False
+                            elif self.read_b1:
+                                self.list_signal = [self.code_read, "B1"]
+                                self.signal.result_list.emit(self.list_signal)
+                                self.read_b1 = False
+                            elif self.read_b2:
+                                self.list_signal = [self.code_read, "B2"]
+                                self.signal.result_list.emit(self.list_signal)
+                                self.read_b2 = False
+                except SerialException:
+                    print(f"Dispotivo desconectado da porta {self.port}")
+                    self.device.close()
+                    self.device_connected = False
+                    set_my_port("")
+                except Exception as e:
+                    print(f"{e} - Worker_BarCodeScanner")
+                    self.device.close()
+                    self.device_connected = False
+            else:
+                self.create_device()
+            try:
+                self.signal.result.emit({"Connected": self.device_connected})
+            except RuntimeError as e:
+                print("Erro de execução no worker do leitor de código de barras: ", e)

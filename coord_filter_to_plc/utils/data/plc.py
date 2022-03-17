@@ -38,7 +38,8 @@ def data_to_plc(data_ctrl: dict,
                 local_signal: bool,
                 local_file: str,
                 ui: Ui_MainWindow,
-                scene):
+                scene,
+                code: str):
     """
     :param data_ctrl: DataCtrl_(Lado do corte (A1, A2, B1, B2))
     :param tag_cut_depth: Tag com a profundidade do corte
@@ -51,11 +52,13 @@ def data_to_plc(data_ctrl: dict,
     :param local_file: Caminho do aquivo local
     :param ui:
     :param scene:
+    :param code:
     :return:
     """
     #######################################
     # set url
     #######################################
+    print("Entrou na rotina")
     if cloud_signal:
         print('- Coletando dados da nuvem')
         url = 'https://sousmile-ed-integration.herokuapp.com/manage-files/download'
@@ -64,7 +67,8 @@ def data_to_plc(data_ctrl: dict,
         url = local_file
     #######################################
     print('- Iniciando transferência de dados para o CLP Rockwell')
-    filepath = f'{url}/{data_ctrl["ProdCode"]}.csv'
+    # filepath = f'{url}/{data_ctrl["ProdCode"]}.csv'
+    filepath = f'{url}/{code}.csv'
     print(filepath)
     print('-Inicia tempo de tranferência')
     start = time.time()  # Inicio da contagem de tempo para a transferência de dados
@@ -72,6 +76,7 @@ def data_to_plc(data_ctrl: dict,
     write_tags(f'{data_ctrl_str}.Started', True)
     try:
         ##############################################################################################
+        print("- Lendo arquivo...")
         data = pd.read_csv(filepath, sep=',', header=None)  # Copia o arquivo csv do caminho  -filepath
         write_tags(f'{data_ctrl_str}.FileNumPos', len(data.index))  # Number of positions in the original file
         ##############################################################################################
