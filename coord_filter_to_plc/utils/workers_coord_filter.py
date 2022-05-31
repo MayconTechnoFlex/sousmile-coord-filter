@@ -2,8 +2,7 @@ import time
 import traceback
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 from pycomm3.exceptions import CommError
-from utils.data.comm_plc import read_multiple
-from data.comm_plc import write_tags
+from utils.data.comm_plc import read_multiple, write_tags
 
 from utils.functions.serial_ports import get_my_port, set_my_port
 from serial import *
@@ -135,6 +134,10 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
 
     @pyqtSlot()
     def run(self):
+        try:
+            write_tags("BarCodeReader.ReadCompete", False)
+        except Exception as e:
+            print(f"Erro na escrita inicial do Leitor de Código de Barras: {e}")
         while self.running:
             if self.device_connected:
                 try:
@@ -163,7 +166,11 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
                     self.device_connected = False
             else:
                 self.create_device()
-            try:
-                self.signal.result.emit({"Connected": self.device_connected})
-            except RuntimeError as e:
-                print("Erro de execução no worker do leitor de código de barras: ", e)
+        if not self.running:
+            if self.device.is_open:
+                print(f"Fechando porta {self.device.port}")
+                try:
+                    self.device.close()
+                except e:
+                    print(f"Erro ao fechar porta - {e}")
+                self.device_connected = False

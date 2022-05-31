@@ -22,12 +22,6 @@ class CoordFilter(QMainWindow):
         super(CoordFilter, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.trigger_a1: bool = False
-        self.trigger_a2: bool = False
-        self.trigger_b1: bool = False
-        self.trigger_b2: bool = False
-        self.code_read: str = ""
-        self.side_string: str = ""
         #######################################
         # Thread
         #######################################
@@ -43,7 +37,6 @@ class CoordFilter(QMainWindow):
         self.myworker_plc.signal_worker.error.connect(self.runnable_error_plc)  # signal when we have a plc comm error
         self.myworker_test.signal_worker_test.result.connect(self.start_test)
         self.myworker_test.signal_worker_test.error.connect(self.runnable_error_test)  # signal when we have a plc comm error
-        self.myworker_bcscanner.signal.result_list.connect(self.bar_code_scanner_result)
         #####################################################################
         # Button call function to start test of filter positions with a file
         #####################################################################
@@ -206,28 +199,15 @@ class CoordFilter(QMainWindow):
             self.test_file_selected = True
             self.ui.btn_test_file.setEnabled(True)
 
-    def bar_code_scanner_result(self, list_bcscanner):
-        self.code_read, self.side_string = list_bcscanner
-
-        if self.side_string == "A1":
-            self.trigger_a1 = True
-        elif self.side_string == "A2":
-            self.trigger_a2 = True
-        elif self.side_string == "B1":
-            self.trigger_b1 = True
-        elif self.side_string == "B2":
-            self.trigger_b2 = True
-
     def plc_routine(self, configpontos, data_ctrl_a1, data_ctrl_a2, data_ctrl_b1, data_ctrl_b2, HMI):
         print('- Comunicação de dados utilizando Python com CLP Rockwell')
-        print(f"------ Leitura do código: {self.code_read}")
-
         if self.ui.rb_plc.isChecked():
             ##############################################
             # Wait trigger A1
             ##############################################
             try:
-                if (self.trigger_a1 or data_ctrl_a1["Trigger"]) and not self.transferring_data:
+                if data_ctrl_a1["Trigger"] and not data_ctrl_a2["Started"]\
+                        and not data_ctrl_b1["Started"] and not data_ctrl_b2["Started"]:
                     self.transferring_data = True
                     data_to_plc(data_ctrl_a1,
                                 'CutDepthA1',
@@ -239,15 +219,15 @@ class CoordFilter(QMainWindow):
                                 self.ui.rb_local_file.isChecked(),
                                 self.ui.le_file_path.text(),
                                 self.ui,
-                                self.scene,
-                                self.code_read)
+                                self.scene)
             except Exception as e:
                 print(f'{e} - trying to read DataCtrl_A1')
             ##############################################
             # Wait trigger A2
             ##############################################
             try:
-                if (self.trigger_a2 or data_ctrl_a2["Trigger"]) and not self.transferring_data:
+                if data_ctrl_a2["Trigger"] and not data_ctrl_a1["Started"]\
+                        and not data_ctrl_b1["Started"] and not data_ctrl_b2["Started"]:
                     self.transferring_data = True
                     data_to_plc(data_ctrl_a2,
                                 'CutDepthA2',
@@ -259,15 +239,15 @@ class CoordFilter(QMainWindow):
                                 self.ui.rb_local_file.isChecked(),
                                 self.ui.le_file_path.text(),
                                 self.ui,
-                                self.scene,
-                                self.code_read)
+                                self.scene)
             except Exception as e:
                 print(f'{e} - trying to read DataCtrl_A2')
             ##############################################
             # Wait trigger B1
             ##############################################
             try:
-                if (self.trigger_b1 or data_ctrl_b1["Trigger"]) and not self.transferring_data:
+                if data_ctrl_b1["Trigger"] and not data_ctrl_a1["Started"]\
+                        and not data_ctrl_a2["Started"] and not data_ctrl_b2["Started"]:
                     self.transferring_data = True
                     data_to_plc(data_ctrl_b1,
                                 'CutDepthB1',
@@ -279,16 +259,15 @@ class CoordFilter(QMainWindow):
                                 self.ui.rb_local_file.isChecked(),
                                 self.ui.le_file_path.text(),
                                 self.ui,
-                                self.scene,
-                                self.code_read)
+                                self.scene)
             except Exception as e:
                 print(f'{e} - trying to read DataCtrl_B1')
             ##############################################
             # Wait trigger B2
             ##############################################
             try:
-                if (self.trigger_b2 or data_ctrl_b2["Trigger"]) and not self.transferring_data:
-                    self.transferring_data = True
+                if data_ctrl_b2["Trigger"] and not data_ctrl_a1["Started"]\
+                        and not data_ctrl_a2["Started"] and not data_ctrl_b1["Started"]:
                     data_to_plc(data_ctrl_b2,
                                 'CutDepthB2',
                                 HMI['EnableLog'],
@@ -299,17 +278,10 @@ class CoordFilter(QMainWindow):
                                 self.ui.rb_local_file.isChecked(),
                                 self.ui.le_file_path.text(),
                                 self.ui,
-                                self.scene,
-                                self.code_read)
+                                self.scene)
             except Exception as e:
                 print(f'{e} - trying to read DataCtrl_B2')
 
-            self.transferring_data = False
-            self.trigger_a1 = False
-            self.trigger_a2 = False
-            self.trigger_b1 = False
-            self.trigger_b2 = False
-            self.code_read = ""
 
     def test_routine(self, signal):
 

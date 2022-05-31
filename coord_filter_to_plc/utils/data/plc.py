@@ -38,8 +38,7 @@ def data_to_plc(data_ctrl: dict,
                 local_signal: bool,
                 local_file: str,
                 ui: Ui_MainWindow,
-                scene,
-                code: str):
+                scene):
     """
     :param data_ctrl: DataCtrl_(Lado do corte (A1, A2, B1, B2))
     :param tag_cut_depth: Tag com a profundidade do corte
@@ -50,9 +49,8 @@ def data_to_plc(data_ctrl: dict,
     :param cloud_signal: Sinal para pegar os pontos do servidor da nuvem
     :param local_signal: Sinal para pegar os pontos de um arquivo local
     :param local_file: Caminho do aquivo local
-    :param ui:
-    :param scene:
-    :param code:
+    :param ui: Interface principal
+    :param scene: Cena para desenhar o produto na tela
     :return:
     """
     #######################################
@@ -68,6 +66,7 @@ def data_to_plc(data_ctrl: dict,
     #######################################
     print('- Iniciando transferência de dados para o CLP Rockwell')
     # filepath = f'{url}/{data_ctrl["ProdCode"]}.csv'
+    code = read_tags(f"{data_ctrl_str}.ProdCode")
     filepath = f'{url}/{code}.csv'
     print(filepath)
     print('-Inicia tempo de tranferência')
