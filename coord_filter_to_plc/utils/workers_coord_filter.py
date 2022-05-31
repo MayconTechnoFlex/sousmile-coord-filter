@@ -1,7 +1,9 @@
+import time
 import traceback
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 from pycomm3.exceptions import CommError
 from utils.data.comm_plc import read_multiple
+from data.comm_plc import write_tags
 
 from utils.functions.serial_ports import get_my_port, set_my_port
 from serial import *
@@ -114,10 +116,6 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
         self.create_device()
         self.port = get_my_port()
         self.code_read: str = ""
-        self.read_a1: bool = False
-        self.read_a2: bool = False
-        self.read_b1: bool = False
-        self.read_b2: bool = False
         self.read_complete: bool = False
         self.list_signal: list = []
 
@@ -148,42 +146,12 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
                         if self.code_size > 4:
                             self.code_read = self.info[2:(self.code_size - 3)]
                             print(f"Código do leitor: {self.code_read}")
-                            if self.code_read == "A1":
-                                self.read_a1 = True
-                                self.read_a2 = False
-                                self.read_b1 = False
-                                self.read_b2 = False
-                            elif self.code_read == "A2":
-                                self.read_a1 = False
-                                self.read_a2 = True
-                                self.read_b1 = False
-                                self.read_b2 = False
-                            elif self.code_read == "B1":
-                                self.read_a1 = False
-                                self.read_a2 = False
-                                self.read_b1 = True
-                                self.read_b2 = False
-                            elif self.code_read == "B2":
-                                self.read_a1 = False
-                                self.read_a2 = False
-                                self.read_b1 = False
-                                self.read_b2 = True
-                            elif self.read_a1:
-                                self.list_signal = [self.code_read, "A1"]
-                                self.signal.result_list.emit(self.list_signal)
-                                self.read_a1 = False
-                            elif self.read_a2:
-                                self.list_signal = [self.code_read, "A2"]
-                                self.signal.result_list.emit(self.list_signal)
-                                self.read_a2 = False
-                            elif self.read_b1:
-                                self.list_signal = [self.code_read, "B1"]
-                                self.signal.result_list.emit(self.list_signal)
-                                self.read_b1 = False
-                            elif self.read_b2:
-                                self.list_signal = [self.code_read, "B2"]
-                                self.signal.result_list.emit(self.list_signal)
-                                self.read_b2 = False
+
+                            write_tags("BarCodeReader.Data", self.code_read)
+                            write_tags("BarCodeReader.ReadCompete", True)
+                            time.sleep(0.5)
+                            write_tags("BarCodeReader.ReadCompete", False)
+
                 except SerialException:
                     print(f"Dispotivo desconectado da porta {self.port}")
                     self.device.close()

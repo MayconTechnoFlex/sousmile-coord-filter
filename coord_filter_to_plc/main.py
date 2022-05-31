@@ -11,7 +11,7 @@ from PyQt5.QtGui import QIcon, QPen, QRegExpValidator
 from ui_py.gui import Ui_MainWindow
 
 from utils.data.plc import data_to_plc
-from utils.workers import *
+from utils.workers_coord_filter import *
 from utils.qt_utils import qt_create_table
 from test.test import test_file
 ########################################

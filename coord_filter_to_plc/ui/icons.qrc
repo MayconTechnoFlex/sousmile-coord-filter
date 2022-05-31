@@ -5,5 +5,9 @@
     <file>../assets/sharp_cloud_black_48dp.png</file>
     <file>../assets/sharp_folder_black_48dp.png</file>
     <file>../assets/sharp_insert_drive_file_black_48dp.png</file>
+    <file>sharp_cloud_black_48dp.png</file>
+    <file>sharp_dvr_black_48dp.png</file>
+    <file>sharp_insert_drive_file_black_48dp.png</file>
+    <file>sharp_task_black_48dp.png</file>
   </qresource>
 </RCC>
