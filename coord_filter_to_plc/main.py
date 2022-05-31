@@ -22,6 +22,8 @@ class CoordFilter(QMainWindow):
         super(CoordFilter, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.first_time = True
         #######################################
         # Thread
         #######################################
@@ -200,7 +202,9 @@ class CoordFilter(QMainWindow):
             self.ui.btn_test_file.setEnabled(True)
 
     def plc_routine(self, configpontos, data_ctrl_a1, data_ctrl_a2, data_ctrl_b1, data_ctrl_b2, HMI):
-        print('- Comunicação de dados utilizando Python com CLP Rockwell')
+        if self.first_time:
+            print('- Comunicação de dados utilizando Python com CLP Rockwell')
+            self.first_time = False
         if self.ui.rb_plc.isChecked():
             ##############################################
             # Wait trigger A1
