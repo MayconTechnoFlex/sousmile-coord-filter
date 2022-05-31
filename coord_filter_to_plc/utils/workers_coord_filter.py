@@ -167,7 +167,7 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
             else:
                 self.create_device()
         if not self.running:
-            if self.device.is_open:
+            if self.device_connected:
                 print(f"Fechando porta {self.device.port}")
                 try:
                     self.device.close()
