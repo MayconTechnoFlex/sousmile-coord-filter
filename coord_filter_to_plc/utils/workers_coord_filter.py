@@ -119,7 +119,7 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
         self.list_signal: list = []
 
     def create_device(self):
-        self.port = get_my_port()
+        self.port = "COM3"
         time.sleep(1)
         try:
             if self.port:
