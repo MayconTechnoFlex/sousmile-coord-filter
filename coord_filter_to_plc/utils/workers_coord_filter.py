@@ -162,6 +162,7 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
 
                                 write_tags("EmployeeName", employee_name)
                                 write_tags("EmployeeId", employee_id)
+                                print(f"Operador: {employee_name} / Id: {employee_id}")
                             else:
                                 write_tags("BarCodeReader.Data", self.code_read)
                                 write_tags("BarCodeReader.ReadCompete", True)
