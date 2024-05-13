@@ -69,7 +69,7 @@ def data_to_plc(data_ctrl: dict,
     code = read_tags(f"{data_ctrl_str}.ProdCode")
     employeeId = read_tags("EmployeeId")
     if cloud_signal:
-        filepath = f'{url}/{code}.csv/{employeeId}'
+        filepath = f'{url}/{code}/{employeeId}'
     else:
         filepath = f'{url}/{code}.csv'
     print(filepath)
