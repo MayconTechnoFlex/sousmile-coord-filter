@@ -67,7 +67,11 @@ def data_to_plc(data_ctrl: dict,
     print('- Iniciando transferência de dados para o CLP Rockwell')
     # filepath = f'{url}/{data_ctrl["ProdCode"]}.csv'
     code = read_tags(f"{data_ctrl_str}.ProdCode")
-    filepath = f'{url}/{code}.csv'
+    employeeId = read_tags("EmployeeId")
+    if cloud_signal:
+        filepath = f'{url}/{code}.csv/{employeeId}'
+    else:
+        filepath = f'{url}/{code}.csv'
     print(filepath)
     print('-Inicia tempo de tranferência')
     start = time.time()  # Inicio da contagem de tempo para a transferência de dados

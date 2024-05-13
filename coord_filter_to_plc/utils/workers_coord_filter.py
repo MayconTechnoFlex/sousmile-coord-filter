@@ -149,11 +149,24 @@ class Worker_BarCodeScanner(QRunnable, WorkerParent):
                         if self.code_size > 4:
                             self.code_read = self.info[2:(self.code_size - 3)]
                             print(f"Código do leitor: {self.code_read}")
+                            if self.code_read[0] == "#":
+                                # the code must be in this format: '#Name_Surname&ID' e.g. "#John_Doe&0001"
+                                strIndex1 = self.code_read.index('_')
+                                strIndex2 = self.code_read.index('&')
 
-                            write_tags("BarCodeReader.Data", self.code_read)
-                            write_tags("BarCodeReader.ReadCompete", True)
-                            time.sleep(0.5)
-                            write_tags("BarCodeReader.ReadCompete", False)
+                                name = self.code_read[1:strIndex1]
+                                surname = self.code_read[strIndex1 + 1:strIndex2]
+
+                                employee_name = f"{name.capitalize()} {surname.capitalize()}"
+                                employee_id = self.code_read[strIndex2 + 1:]
+
+                                write_tags("EmployeeName", employee_name)
+                                write_tags("EmployeeId", employee_id)
+                            else:
+                                write_tags("BarCodeReader.Data", self.code_read)
+                                write_tags("BarCodeReader.ReadCompete", True)
+                                time.sleep(0.5)
+                                write_tags("BarCodeReader.ReadCompete", False)
 
                 except SerialException:
                     print(f"Dispotivo desconectado da porta {self.port}")
